@@ -6,11 +6,12 @@ content = file.readlines()
 file.close()
 #todo make these functions like a good programmer
 dict = {}
-for letter in content[0]:
-    if letter in dict:
-        dict[letter] = dict[letter]+1
-    else:
-        dict[letter] = 1
+for i in range(len(content)):
+    for letter in content[i]:
+        if letter in dict:
+            dict[letter] = dict[letter]+1
+        else:
+            dict[letter] = 1
 
 
 #A Branch is one of the following
@@ -103,12 +104,8 @@ def sort_dict(d):
         sorted[largest] = dict[largest]
         del temp[largest]
     return sorted
-print(list(sort_dict(find_probabilities(dict)).items()))
-print(create_tree(list(sort_dict(find_probabilities(dict)).items())).right)
 
 def merge_two_dicts(x, y):
-    """Given two dicts, merge them into a new dict as a shallow copy."""
-
     z = x.copy()
     z.update(y)
     return z
@@ -118,7 +115,7 @@ def merge_two_dicts(x, y):
 #Accumulator: keeps track of which directions we have already been to
 def encode_tree(b,acc):
     if isinstance(b,str):
-        return{b:int(acc)}
+        return{b:acc}
     elif b==-1:
         return {}
     else:
@@ -126,6 +123,51 @@ def encode_tree(b,acc):
                                encode_tree(b.right, acc+"1"))
 
 
-print(encode_tree(create_tree(list(sort_dict(find_probabilities(dict)).items())), ""))
+encodement = encode_tree(create_tree(list(sort_dict(find_probabilities(dict)).items())), "")
+print(encodement)
+final = ""
+for i in range(len(content)):
+    for letter in content[0]:
+        final+=encodement[letter]
+
+print(final)
+def pad_zeros(b):
+    while len(b) < 8:
+        b = b + "0"
+    return b
+def pad_zeros_before(b):
+    while len(b) < 8:
+        b =  "0"  + b
+    return b
 
 
+#todo make al this shit into function
+bytes = []
+q=0
+#please fix this hack
+while q<len(final):
+    if q+8>len(final):
+        bytes.append(pad_zeros(final[q:]))
+        bytes.append(pad_zeros_before(bin(len(final[q:])-1)[2:]))
+        q=len(final)
+    else:
+        bytes.append(final[q:q+8])
+        q=q+8
+print(bytes)
+
+ints = []
+for i in bytes:
+    ints.append(int(i, 2))
+
+print(ints)
+
+data = []
+for i in ints:
+    data.append(bytearray([i]))
+
+print(data)
+
+new_file = open('out.bin', 'wb')
+
+for i in data:
+    new_file.write(i)
