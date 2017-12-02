@@ -1,4 +1,5 @@
 import math
+import pickle
 #file_name = input("Enter file name")
 
 file = open("smp.txt", "r")
@@ -13,7 +14,6 @@ for i in range(len(content)):
         else:
             dict[letter] = 1
 
-
 #A Branch is one of the following
 # - String
 # - split_node
@@ -24,6 +24,8 @@ class split_node(object):
     def __init__(self, left, right):
         self.left=left
         self.right=right
+    def __copy__(self):
+        return split_node(self.left,self.right)
 
 
 
@@ -122,15 +124,13 @@ def encode_tree(b,acc):
         return merge_two_dicts(encode_tree(b.left, acc+"0"),
                                encode_tree(b.right, acc+"1"))
 
-
-encodement = encode_tree(create_tree(list(sort_dict(find_probabilities(dict)).items())), "")
-print(encodement)
+huffman = create_tree(list(sort_dict(find_probabilities(dict)).items()))
+encodement = encode_tree(huffman, "")
 final = ""
 for i in range(len(content)):
-    for letter in content[0]:
+    for letter in content[i]:
         final+=encodement[letter]
 
-print(final)
 def pad_zeros(b):
     while len(b) < 8:
         b = b + "0"
@@ -153,21 +153,44 @@ while q<len(final):
     else:
         bytes.append(final[q:q+8])
         q=q+8
-print(bytes)
 
 ints = []
 for i in bytes:
     ints.append(int(i, 2))
-
-print(ints)
-
 data = []
 for i in ints:
     data.append(bytearray([i]))
-
-print(data)
-
 new_file = open('out.bin', 'wb')
 
 for i in data:
     new_file.write(i)
+
+pickle.dump(huffman, open("hf.p", "wb"))
+
+#bytearray Tree -> String
+def decompress(ba,t):
+    bs = cleave_extra(bytearray_to_string(ba))
+    text = ""
+    path=t.__copy__()
+    for i in bs:
+        if i=="0":
+            path = path.left
+        else:
+            path=path.right
+        if type(path)==str:
+            text+=path
+            path = t.__copy__()
+    return text
+
+
+#list of bytearray->String
+def bytearray_to_string(ba):
+    build=""
+    for i in ba:
+        build+=(pad_zeros_before(str(bin(i[0]))[2:]))
+    return build
+
+#bitstring -> bitstring
+def cleave_extra (bs):
+    final_bit = int(bs[-8:],2)
+    return bs[:(len(bs)- (8-final_bit) +1)-8]
