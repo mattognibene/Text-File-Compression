@@ -1,18 +1,6 @@
 import math
 import pickle
-#file_name = input("Enter file name")
 
-file = open("smp.txt", "r")
-content = file.readlines()
-file.close()
-#todo make these functions like a good programmer
-dict = {}
-for i in range(len(content)):
-    for letter in content[i]:
-        if letter in dict:
-            dict[letter] = dict[letter]+1
-        else:
-            dict[letter] = 1
 
 #A Branch is one of the following
 # - String
@@ -28,6 +16,17 @@ class split_node(object):
         return split_node(self.left,self.right)
 
 
+# String -> Dict
+# returns a dict where the key is the character and the value is how many time it occurs
+def create_occurences(content):
+    occ = {}
+    for i in range(len(content)):
+        for letter in content[i]:
+            if letter in occ:
+                occ[letter] = occ[letter] + 1
+            else:
+                occ[letter] = 1
+    return occ
 
 #list of Pair -> Branch
 #returns the huffman tree representation of the given dict
@@ -68,12 +67,6 @@ def second_half(l):
     return l[math.floor(len(l) / 2):]
 
 
-
-
-
-
-
-
 #Dict -> Dict
 #returns a dict where each component is value of the component in d divided by the sum
 def find_probabilities(d):
@@ -103,7 +96,7 @@ def sort_dict(d):
         for it in temp:
             if temp[it] > temp[largest]:
                 largest = it
-        sorted[largest] = dict[largest]
+        sorted[largest] = d[largest]
         del temp[largest]
     return sorted
 
@@ -124,51 +117,15 @@ def encode_tree(b,acc):
         return merge_two_dicts(encode_tree(b.left, acc+"0"),
                                encode_tree(b.right, acc+"1"))
 
-huffman = create_tree(list(sort_dict(find_probabilities(dict)).items()))
-encodement = encode_tree(huffman, "")
-final = ""
-for i in range(len(content)):
-    for letter in content[i]:
-        final+=encodement[letter]
 
-def pad_zeros(b):
-    while len(b) < 8:
-        b = b + "0"
-    return b
-def pad_zeros_before(b):
-    while len(b) < 8:
-        b =  "0"  + b
-    return b
-
-
-#todo make al this shit into function
-bytes = []
-q=0
-#please fix this hack
-while q<len(final):
-    if q+8>len(final):
-        bytes.append(pad_zeros(final[q:]))
-        bytes.append(pad_zeros_before(bin(len(final[q:])-1)[2:]))
-        q=len(final)
-    else:
-        bytes.append(final[q:q+8])
-        q=q+8
-
-ints = []
-for i in bytes:
-    ints.append(int(i, 2))
-data = []
-for i in ints:
-    data.append(bytearray([i]))
-new_file = open('out.bin', 'wb')
-
-for i in data:
-    new_file.write(i)
-
-pickle.dump(huffman, open("hf.p", "wb"))
 
 #bytearray Tree -> String
-def decompress(ba,t):
+def decompress():
+    file_name = input("Enter the file name (NOTE! do not include the -out.bin or -enc.p. \n"
+                      "If the file is doc-out.bin and doc-enc.p, simply enter \"doc\"")
+    t = pickle.load(open(file_name+"-enc.p","rb"))
+    bin = open(file_name+"-out.bin","rb")
+    print(ba)
     bs = cleave_extra(bytearray_to_string(ba))
     text = ""
     path=t.__copy__()
@@ -194,3 +151,102 @@ def bytearray_to_string(ba):
 def cleave_extra (bs):
     final_bit = int(bs[-8:],2)
     return bs[:(len(bs)- (8-final_bit) +1)-8]
+
+def pad_zeros(b):
+    while len(b) < 8:
+        b = b + "0"
+    return b
+
+def pad_zeros_before(b):
+    while len(b) < 8:
+        b = "0" + b
+    return b
+
+#Bitstring -> Bytearray
+#takes a bit string and divides them into a bytearray. The final byte is always the position
+#of the final meaningful bit of the byte before it
+def divide_to_bytes(final):
+    bytes = []
+    q = 0
+    while q < len(final):
+        if q + 8 > len(final):
+            bytes.append(pad_zeros(final[q:]))
+            bytes.append(pad_zeros_before(bin(len(final[q:]) - 1)[2:]))
+            q = len(final)
+        else:
+            bytes.append(final[q:q + 8])
+            q = q + 8
+    '''data = []
+    for i in bytes:
+        data.append(bytearray(int(i, 2)))
+    return data'''
+    ints = []
+    for i in bytes:
+        ints.append(int(i, 2))
+    data = []
+    for i in ints:
+        data.append(bytearray([i]))
+    return data
+
+
+#String Encodement -> Bitstring
+#returns the final text encoded
+def encode_text(content, encodement):
+    final = ""
+    for i in range(len(content)):
+        for letter in content[i]:
+            final += encodement[letter]
+    return final
+
+#Bytearray Huffman String-> .bin .p
+#creates two files, one of the encoded text, one one the encodement
+def output(bytarry,hf,name):
+    new_file = open(remove_tag(name) + "-out.bin", 'wb')
+    for i in bytarry:
+        new_file.write(i)
+    pickle.dump(hf, open(remove_tag(name)+"-enc.p", "wb"))
+
+#main fuction for compressing
+def compress():
+    file_name = input("Enter file name")
+    file = open(file_name, "r")
+    content = file.readlines()
+    file.close()
+    occ = create_occurences(content)
+
+    #huffman->the tree representation of th encodement
+    huffman = create_tree(list(sort_dict(find_probabilities(occ)).items()))
+    #encodement->a dict where the letter is the key and its encodement the value
+    encodement = encode_tree(huffman, "")
+    encoded_text = encode_text(content,encodement)
+    print(encoded_text)
+    #output(divide_to_bytes(encoded_text),huffman,file_name)
+    new_file = open('out.bin', 'wb')
+    for i in divide_to_bytes(encoded_text):
+        new_file.write(i)
+
+    pickle.dump(huffman, open("enc.p", "wb"))
+    print(len(divide_to_bytes(encoded_text)))
+
+    print("compression succesful!")
+    #todo statistics on how much space was saved
+    print("Compression saved as " + remove_tag(file_name)+"-enc.p and " + remove_tag(file_name)+"-out.bin")
+    print("note: both files are necessary for decompression")
+
+
+#String->String
+#removes tags such as .txt and .bin from file names
+def remove_tag(str):
+    return str[0:str.index(".")]
+def main():
+    choice = input("Press [1] to compress. \n"
+                   "Press [2] to decompress")
+    while(not(choice=="1" or choice=="2")):
+        choice = input("Press [1] to compress. \n"
+                       "Press [2] to decompress")
+    if choice == "1":
+        compress()
+    else:
+        decompress()
+
+main()
