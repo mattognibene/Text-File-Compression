@@ -15,7 +15,13 @@ class split_node(object):
     def __copy__(self):
         return split_node(self.left,self.right)
 
+#A pair is a pair(Any Number)
+class pair(object):
+    def __init__(self, val, num):
+        self.val = val
+        self.num = num
 
+#Compression
 # String -> Dict
 # returns a dict where the key is the character and the value is how many time it occurs
 def create_occurences(content):
@@ -28,35 +34,17 @@ def create_occurences(content):
                 occ[letter] = 1
     return occ
 
-
-#A pair is a pair(Any Number)
-class pair(object):
-    def __init__(self, val, num):
-        self.val = val
-        self.num = num
-
-# A split_node is a split_node(Branch Branch)
-class split_node(object):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def __copy__(self):
-        return split_node(self.left, self.right)
-
-
-# List of Pairs -> Tree
-#takes a dict of the occurences and creates a huffman tree
-def create_tree(lop):
-    while len(lop)>1:
-        lop = combine_lowest(lop)
-
-    return lop[0].val
+# Dict -> List of Pairs
+def create_pairs(occ):
+    lop = []
+    for omega in occ:
+        lop.append(pair(omega,occ[omega]))
+    return lop
 
 #LoP -> Lop
 #sorts a list of pair
 def sort_list_of_pair(lop):
-    #please stop being lazy and make this merge sort
+    #todo please stop being lazy and make this merge sort
     temp = []
     for i in lop:
         temp.append(i)
@@ -73,6 +61,14 @@ def sort_list_of_pair(lop):
         del temp[index]
     return sorted
 
+# List of Pairs -> Tree
+#takes a dict of the occurences and creates a huffman tree
+def create_tree(lop):
+    while len(lop)>1:
+        lop = combine_lowest(lop)
+
+    return lop[0].val
+
 #List of Pair -> Lst of Pair
 #takes a list of pair but with the two lowest pairs combined into a tree
 def combine_lowest(lop):
@@ -82,14 +78,6 @@ def combine_lowest(lop):
     del sorted[0]
     del sorted[0]
     return sorted
-
-
-# Dict -> List of Pairs
-def create_pairs(occ):
-    lop = []
-    for omega in occ:
-        lop.append(pair(omega,occ[omega]))
-    return lop
 
 #Branch String-> Dict
 #returns a dict where the key is the letter and the value is its encoding
@@ -108,87 +96,6 @@ def merge_two_dicts(x, y):
     z.update(y)
     return z
 
-#binary -> String
-#converts a binary number into a string rep of it as a byte
-def bin_to_bytestring(b):
-    return pad_zeros_before(b[2:])
-
-#bytearray Tree -> String
-def decompress():
-    file_name = input("Enter the file name (NOTE! do not include the -out.bin or -enc.p. \n"
-                      "If the file is doc-out.bin and doc-enc.p, simply enter \"doc\"")
-    t = pickle.load(open(file_name+"-enc.p","rb"))
-    bin_f = open(file_name+"-out.bin","rb")
-    ba = bin_f.read()
-    bs = ""
-    for i in ba:
-        bs+= bin_to_bytestring(bin(i))
-
-    bs = cleave_extra(bs)
-    text = ""
-    path=t.__copy__()
-    for i in bs:
-        if i=="0":
-            path = path.left
-        else:
-            path=path.right
-        if type(path)==str:
-            text+=path
-            path = t.__copy__()
-    print("Decompressed file saved as "+ file_name +".txt")
-    new_file = open(file_name+".txt","w+")
-    new_file.write(text)
-
-
-#list of bytearray->String
-def bytearray_to_string(ba):
-    build=""
-    for i in ba:
-        build+=(pad_zeros_before(str(bin(i[0]))[2:]))
-    return build
-
-#bitstring -> bitstring
-def cleave_extra (bs):
-    final_bit = int(bs[-8:],2)
-    return bs[:(len(bs)- (8-final_bit) +1)-8]
-
-def pad_zeros(b):
-    while len(b) < 8:
-        b = b + "0"
-    return b
-
-def pad_zeros_before(b):
-    while len(b) < 8:
-        b = "0" + b
-    return b
-
-#Bitstring -> Bytearray
-#takes a bit string and divides them into a bytearray. The final byte is always the position
-#of the final meaningful bit of the byte before it
-def divide_to_bytes(final):
-    bytes = []
-    q = 0
-    while q < len(final):
-        if q + 8 > len(final):
-            bytes.append(pad_zeros(final[q:]))
-            bytes.append(pad_zeros_before(bin(len(final[q:]) - 1)[2:]))
-            q = len(final)
-        else:
-            bytes.append(final[q:q + 8])
-            q = q + 8
-    '''data = []
-    for i in bytes:
-        data.append(bytearray(int(i, 2)))
-    return data'''
-    ints = []
-    for i in bytes:
-        ints.append(int(i, 2))
-    data = []
-    for i in ints:
-        data.append(bytearray([i]))
-    return data
-
-
 #String Encodement -> Bitstring
 #returns the final text encoded
 def encode_text(content, encodement):
@@ -205,6 +112,28 @@ def output(bytarry,hf,name):
     for i in bytarry:
         new_file.write(i)
     pickle.dump(hf, open(remove_tag(name)+"-enc.p", "wb"))
+
+#Bitstring -> Bytearray
+#takes a bit string and divides them into a bytearray. The final byte is always the position
+#of the final meaningful bit of the byte before it
+def divide_to_bytes(final):
+    bytes = []
+    q = 0
+    while q < len(final):
+        if q + 8 > len(final):
+            bytes.append(pad_zeros(final[q:]))
+            bytes.append(pad_zeros_before(bin(len(final[q:]) - 1)[2:]))
+            q = len(final)
+        else:
+            bytes.append(final[q:q + 8])
+            q = q + 8
+    ints = []
+    for i in bytes:
+        ints.append(int(i, 2))
+    data = []
+    for i in ints:
+        data.append(bytearray([i]))
+    return data
 
 #main fuction for compressing
 def compress():
@@ -230,6 +159,68 @@ def compress():
     #todo statistics on how much space was saved
     print("Compression saved as " + remove_tag(file_name)+"-enc.p and " + remove_tag(file_name)+"-out.bin")
     print("note: both files are necessary for decompression")
+
+#Decompression
+#binary -> String
+#converts a binary number into a string rep of it as a byte
+def bin_to_bytestring(b):
+    return pad_zeros_before(b[2:])
+
+#bitstring -> bitstring
+def cleave_extra (bs):
+    final_bit = int(bs[-8:],2)
+    return bs[:(len(bs)- (8-final_bit) +1)-8]
+
+#bitstring tree -> string
+def read_encodemenet(bs, t):
+    text=""
+    path = t.__copy__()
+    for i in bs:
+        if i == "0":
+            path = path.left
+        else:
+            path = path.right
+        if type(path) == str:
+            text += path
+            path = t.__copy__()
+    return text
+
+#list of bytearray->String
+def bytearray_to_string(ba):
+    build=""
+    for i in ba:
+        build+=(pad_zeros_before(str(bin(i[0]))[2:]))
+    return build
+
+
+def pad_zeros(b):
+    while len(b) < 8:
+        b = b + "0"
+    return b
+
+def pad_zeros_before(b):
+    while len(b) < 8:
+        b = "0" + b
+    return b
+
+
+#bytearray Tree -> String
+def decompress():
+    file_name = input("Enter the file name (NOTE! do not include the -out.bin or -enc.p. \n"
+                      "If the file is doc-out.bin and doc-enc.p, simply enter \"doc\"")
+    t = pickle.load(open(file_name+"-enc.p","rb"))
+    bin_f = open(file_name+"-out.bin","rb")
+    ba = bin_f.read()
+    bs = ""
+    for i in ba:
+        bs+= bin_to_bytestring(bin(i))
+
+    bs = cleave_extra(bs)
+    text = read_encodemenet(bs,t)
+
+    print("Decompressed file saved as "+ file_name +".txt")
+    new_file = open(file_name+".txt","w+")
+    new_file.write(text)
 
 
 #String->String
